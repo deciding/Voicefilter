@@ -85,23 +85,23 @@ def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp,
                     dvec_list.append(dvec)
                 dvec = torch.stack(dvec_list, dim=0)
                 dvec = dvec.detach()
-                print("embedder time: %f" % (time()-start))
+                #print("embedder time: %f" % (time()-start))
 
                 mask = model(mixed_mag, dvec)
                 output = mixed_mag * mask
-                output.tolist()
-                print("mask time: %f" % (time()-start))
+                #output.tolist()
+                #print("mask time: %f" % (time()-start))
 
                 # output = torch.pow(torch.clamp(output, min=0.0), hp.audio.power)
                 # target_mag = torch.pow(torch.clamp(target_mag, min=0.0), hp.audio.power)
                 loss = criterion(output, target_mag)
-                print("loss time: %f" % (time()-start))
+                #print("loss time: %f" % (time()-start))
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 step += 1
-                print("opt time: %f" % (time()-start))
+                #print("opt time: %f" % (time()-start))
 
                 loss_val = loss.item()
                 elapsed=time()-start

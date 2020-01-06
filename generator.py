@@ -11,6 +11,7 @@ from multiprocessing import Pool, cpu_count
 from utils.audio import Audio
 from utils.hparams import HParam
 
+#python generator.py -c config/config.yaml -d ../datasets/raw_libri/LibriSpeech/ -o training_prepared
 #python generator.py -c config/config.yaml -d ../datasets/raw_libri/librispeech -o training_libri_mel
 #python generator.py -c config/config.yaml -d ../datasets/raw_libri/librispeech -o test_libri_mel --need_phase
 
@@ -24,6 +25,12 @@ def vad_merge(w):
         temp.append(w[s:e])
     return np.concatenate(temp, axis=None)
 
+def mix_wrapper(hp, args, audio, num, s1_dvec, s1_target, s2, train):
+    try:
+        mix(hp, args, audio, num, s1_dvec, s1_target, s2, train)
+    except Exception as e:
+        print(s1_dvec, s1_target, s2)
+        print(e)
 
 def mix(hp, args, audio, num, s1_dvec, s1_target, s2, train):
     srate = hp.audio.sample_rate
@@ -66,14 +73,21 @@ def mix(hp, args, audio, num, s1_dvec, s1_target, s2, train):
     mixed_wav_path = formatter(dir_, hp.form.mixed.wav, num)
     librosa.output.write_wav(target_wav_path, w1, srate)
     librosa.output.write_wav(mixed_wav_path, mixed, srate)
+    if True:
+        dvec_wav_path = formatter(dir_, hp.form.dvec_wav, num)
+        librosa.output.write_wav(dvec_wav_path, d, srate)
+    if True:
+        target2_wav_path = formatter(dir_, hp.form.target2.wav, num)
+        librosa.output.write_wav(target2_wav_path, w2, srate)
 
-    # save magnitude spectrograms
-    target_mag, target_phase = audio.wav2spec(w1)
-    mixed_mag, mixed_phase = audio.wav2spec(mixed)
-    target_mag_path = formatter(dir_, hp.form.target.mag, num)
-    mixed_mag_path = formatter(dir_, hp.form.mixed.mag, num)
-    torch.save(torch.from_numpy(target_mag), target_mag_path)
-    torch.save(torch.from_numpy(mixed_mag), mixed_mag_path)
+    if not args.no_need_spec:
+        # save magnitude spectrograms
+        target_mag, target_phase = audio.wav2spec(w1)
+        mixed_mag, mixed_phase = audio.wav2spec(mixed)
+        target_mag_path = formatter(dir_, hp.form.target.mag, num)
+        mixed_mag_path = formatter(dir_, hp.form.mixed.mag, num)
+        torch.save(torch.from_numpy(target_mag), target_mag_path)
+        torch.save(torch.from_numpy(mixed_mag), mixed_mag_path)
 
     if args.need_mel:
         # save mel spectrograms
@@ -94,6 +108,10 @@ def mix(hp, args, audio, num, s1_dvec, s1_target, s2, train):
     dvec_text_path = formatter(dir_, hp.form.dvec, num)
     with open(dvec_text_path, 'w') as f:
         f.write(s1_dvec)
+    assert os.path.exists(dvec_wav_path) and os.path.exists(mixed_wav_path) \
+            and os.path.exists(target_wav_path) and os.path.exists(mixed_mag_path) \
+            and os.path.exists(target_mag_path) and os.path.exists(dvec_text_path) \
+            and os.path.exists(target2_wav_path)
 
 
 if __name__ == '__main__':
@@ -114,6 +132,12 @@ if __name__ == '__main__':
                         help='apply vad to wav file. yes(1) or no(0, default)')
     parser.add_argument('--need_mel', action='store_true',
                         help='apply vad to wav file. yes(1) or no(0, default)')
+    parser.add_argument('--no_need_spec', action='store_true',
+                        help='apply vad to wav file. yes(1) or no(0, default)')
+    parser.add_argument('--train_csv', type=str, default='datasets/train_tuples.csv',
+                        help="train csv")
+    parser.add_argument('--test_csv', type=str, default='datasets/dev_tuples.csv',
+                        help="test csv")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -122,55 +146,146 @@ if __name__ == '__main__':
 
     hp = HParam(args.config)
 
-    cpu_num = cpu_count() if args.process_num is None else args.process_num
-
-    if args.libri_dir is None and args.voxceleb_dir is None:
-        raise Exception("Please provide directory of data")
-
-    if args.libri_dir is not None:
-        train_folders = [x for x in glob.glob(os.path.join(args.libri_dir, 'train-clean-100', '*'))
-                            if os.path.isdir(x)] + \
-                        [x for x in glob.glob(os.path.join(args.libri_dir, 'train-clean-360', '*'))
-                            if os.path.isdir(x)]
-                        # we recommned to exclude train-other-500
-                        # See https://github.com/mindslab-ai/voicefilter/issues/5#issuecomment-497746793
-                        # + \
-                        #[x for x in glob.glob(os.path.join(args.libri_dir, 'train-other-500', '*'))
-                        #    if os.path.isdir(x)]
-        test_folders = [x for x in glob.glob(os.path.join(args.libri_dir, 'dev-clean', '*'))]
-
-    elif args.voxceleb_dir is not None:
-        all_folders = [x for x in glob.glob(os.path.join(args.voxceleb_dir, '*'))
-                            if os.path.isdir(x)]
-        train_folders = all_folders[:-20]
-        test_folders = all_folders[-20:]
-
-    train_spk = [glob.glob(os.path.join(spk, '**', hp.form.input), recursive=True)
-                    for spk in train_folders]
-    train_spk = [x for x in train_spk if len(x) >= 2]
-
-    test_spk = [glob.glob(os.path.join(spk, '**', hp.form.input), recursive=True)
-                    for spk in test_folders]
-    test_spk = [x for x in test_spk if len(x) >= 2]
-
     audio = Audio(hp)
 
-    def train_wrapper(num):
-        spk1, spk2 = random.sample(train_spk, 2)
-        s1_dvec, s1_target = random.sample(spk1, 2)
-        s2 = random.choice(spk2)
-        mix(hp, args, audio, num, s1_dvec, s1_target, s2, train=True)
+    cpu_num = cpu_count() if args.process_num is None else args.process_num
 
-    def test_wrapper(num):
-        spk1, spk2 = random.sample(test_spk, 2)
-        s1_dvec, s1_target = random.sample(spk1, 2)
-        s2 = random.choice(spk2)
-        mix(hp, args, audio, num, s1_dvec, s1_target, s2, train=False)
+    if False:
+        start_index=70000
+        total_num=50000
+        if args.libri_dir is None and args.voxceleb_dir is None:
+            raise Exception("Please provide directory of data")
 
-    arr = list(range(10**5))
-    with Pool(cpu_num) as p:
-        r = list(tqdm.tqdm(p.imap(train_wrapper, arr), total=len(arr)))
+        if args.libri_dir is not None:
+            train_folders = [x for x in glob.glob(os.path.join(args.libri_dir, 'train-clean-100', '*'))
+                                if os.path.isdir(x)] + \
+                            [x for x in glob.glob(os.path.join(args.libri_dir, 'train-clean-360', '*'))
+                                if os.path.isdir(x)]
+                            # we recommned to exclude train-other-500
+                            # See https://github.com/mindslab-ai/voicefilter/issues/5#issuecomment-497746793
+                            # + \
+                            #[x for x in glob.glob(os.path.join(args.libri_dir, 'train-other-500', '*'))
+                            #    if os.path.isdir(x)]
+            test_folders = [x for x in glob.glob(os.path.join(args.libri_dir, 'dev-clean', '*'))]
 
-    arr = list(range(10**2))
-    with Pool(cpu_num) as p:
-        r = list(tqdm.tqdm(p.imap(test_wrapper, arr), total=len(arr)))
+        elif args.voxceleb_dir is not None:
+            all_folders = [x for x in glob.glob(os.path.join(args.voxceleb_dir, '*'))
+                                if os.path.isdir(x)]
+            train_folders = all_folders[:-20]
+            test_folders = all_folders[-20:]
+
+        train_spk = [glob.glob(os.path.join(spk, '**', hp.form.input), recursive=True)
+                        for spk in train_folders]
+        train_spk = [x for x in train_spk if len(x) >= 2]
+
+        test_spk = [glob.glob(os.path.join(spk, '**', hp.form.input), recursive=True)
+                        for spk in test_folders]
+        test_spk = [x for x in test_spk if len(x) >= 2]
+
+        def train_wrapper(num):
+            num+=start_index
+            spk1, spk2 = random.sample(train_spk, 2)
+            s1_dvec, s1_target = random.sample(spk1, 2)
+            s2 = random.choice(spk2)
+            mix_wrapper(hp, args, audio, num, s1_dvec, s1_target, s2, train=True)
+
+        def test_wrapper(num):
+            num+=start_index
+            spk1, spk2 = random.sample(test_spk, 2)
+            s1_dvec, s1_target = random.sample(spk1, 2)
+            s2 = random.choice(spk2)
+            mix_wrapper(hp, args, audio, num, s1_dvec, s1_target, s2, train=False)
+
+        def generate_train_wrapper(num):
+            spk1, spk2 = random.sample(train_spk, 2)
+            s1_dvec, s1_target = random.sample(spk1, 2)
+            s2 = random.choice(spk2)
+            s1_dvec=os.path.splitext(os.path.basename(s1_dvec))[0]
+            s1_target=os.path.splitext(os.path.basename(s1_target))[0]
+            s2=os.path.splitext(os.path.basename(s2))[0]
+            return ','.join([s1_dvec, s1_target, s2])+'\n'
+
+        with open("datasets/random%d.csv" % total_num, 'w') as f:
+            for i in range(total_num):
+                f.write(generate_train_wrapper(i))
+
+        ##arr = list(range(10**5))
+        #arr = list(range(50000))
+        #with Pool(cpu_num) as p:
+        #    r = list(tqdm.tqdm(p.imap(train_wrapper, arr), total=len(arr)))
+
+        #arr = list(range(10**2))
+        #with Pool(cpu_num) as p:
+        #    r = list(tqdm.tqdm(p.imap(test_wrapper, arr), total=len(arr)))
+    else:
+
+        def filter_clean(files_ids3):
+            file_dir1=os.path.join(args.libri_dir, 'train-clean-100')
+            file_dir2=os.path.join(args.libri_dir, 'train-clean-360')
+            file_dir3=os.path.join(args.libri_dir, 'dev-clean')
+            file_ids=files_ids3.strip().split(',')
+            for file_id in file_ids:
+                file_paths=file_id.split('-')
+                file_dirname=os.path.join(file_dir1, file_paths[0], file_paths[1])
+                if not os.path.exists(file_dirname):
+                    file_dirname=os.path.join(file_dir2, file_paths[0], file_paths[1])
+                if not os.path.exists(file_dirname):
+                    file_dirname=os.path.join(file_dir3, file_paths[0], file_paths[1])
+                if not os.path.exists(file_dirname):
+                    return False
+            return True
+
+        with open(args.train_csv) as f:
+            train_list=f.readlines()
+        print("Prev train list len : %d" % len(train_list))
+        train_list=[train_line for train_line in train_list if filter_clean(train_line)]
+        print("Post train list len : %d" % len(train_list))
+
+        with open(args.test_csv) as f:
+            test_list=f.readlines()
+        print("Prev test list len : %d" % len(test_list))
+        test_list=[test_line for test_line in test_list if filter_clean(test_line)]
+        print("Post test list len : %d" % len(test_list))
+
+        def get_libri_full_path_from_id(file_id):
+            file_dir1=os.path.join(args.libri_dir, 'train-clean-100')
+            file_dir2=os.path.join(args.libri_dir, 'train-clean-360')
+            file_dir3=os.path.join(args.libri_dir, 'dev-clean')
+            file_paths=file_id.split('-')
+            file_suffix='-norm.wav'
+            file_dirname=os.path.join(file_dir1, file_paths[0], file_paths[1])
+            if not os.path.exists(file_dirname):
+                file_dirname=os.path.join(file_dir2, file_paths[0], file_paths[1])
+            if not os.path.exists(file_dirname):
+                file_dirname=os.path.join(file_dir3, file_paths[0], file_paths[1])
+            if not os.path.exists(file_dirname):
+                print("Cannot find dir path %s" % file_dirname)
+            file_full_path=os.path.join(file_dirname, "%s%s" % (file_id, file_suffix))
+            if not os.path.exists(file_full_path):
+                print("Cannot find file %s" % file_full_path)
+            return file_full_path
+
+        def prepared_train_wrapper(num):
+            s1_dvec, s1_target, s2 = train_list[num].strip().split(',')
+            s1_dvec = get_libri_full_path_from_id(s1_dvec)
+            if not s1_dvec:
+                return
+            s1_target = get_libri_full_path_from_id(s1_target)
+            s2 = get_libri_full_path_from_id(s2)
+            mix_wrapper(hp, args, audio, num, s1_dvec, s1_target, s2, train=True)
+
+        def prepared_test_wrapper(num):
+            s1_dvec, s1_target, s2 = test_list[num].strip().split(',')
+            s1_dvec = get_libri_full_path_from_id(s1_dvec)
+            s1_target = get_libri_full_path_from_id(s1_target)
+            s2 = get_libri_full_path_from_id(s2)
+            mix_wrapper(hp, args, audio, num, s1_dvec, s1_target, s2, train=False)
+
+        ##arr = list(range(10**5))
+        #arr = list(range(62591))
+        #with Pool(cpu_num) as p:
+        #    r = list(tqdm.tqdm(p.imap(prepared_train_wrapper, arr), total=len(arr)))
+
+        arr = list(range(10**3))
+        with Pool(cpu_num) as p:
+            r = list(tqdm.tqdm(p.imap(prepared_test_wrapper, arr), total=len(arr)))
