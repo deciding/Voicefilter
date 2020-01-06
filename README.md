@@ -97,6 +97,14 @@ Unofficial PyTorch implementation of Google AI's:
     
     The model can be downloaded at [this GDrive link](https://drive.google.com/file/d/1YFmhmUok-W76JkrfA0fzQt3c-ZsfiwfL/view?usp=sharing).
 
+0. Necessary dependencies
+
+    pip install https://download.pytorch.org/whl/cu100/torch-1.0.1.post2-cp36-cp36m-linux_x86_64.whl
+    docker run -itd  -v <volume>:/workspace -w /workspace --shm-size=2g <image_name> bash
+    add-apt-repository ppa:jonathonf/ffmpeg-4
+    apt-get update
+    apt-get install ffmpeg
+
 1. Run
 
     After specifying `train_dir`, `test_dir` at `config.yaml`, run:
