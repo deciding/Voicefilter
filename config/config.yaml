@@ -23,6 +23,8 @@ form:
   input: '*-norm.wav'
   dvec: '*-dvec.txt' # will be calculated on-the-fly
   dvec_wav: '*-dvec.wav' # will be calculated on-the-fly
+  dvec2_wav: '*-dvec2.wav' # will be calculated on-the-fly
+  dvec3_wav: '*-dvec3.wav' # will be calculated on-the-fly
   target:
     wav: '*-target.wav'
     mag: '*-target.pt'
@@ -38,7 +40,7 @@ form:
 ---
 train:
   batch_size: 8
-  num_workers: 16
+  num_workers: 20
   optimizer: 'adam'
   adam: 0.001
   adabound:

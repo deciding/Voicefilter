@@ -9,6 +9,8 @@ from utils.writer import MyWriter
 from datasets.dataloader import create_dataloader
 
 #CUDA_VISIBLE_DEVICES=9 python trainer.py -c config/config.yaml -e embedder.pt -m first
+#Eval
+#CUDA_VISIBLE_DEVICES=4 python trainer.py -c config/config.yaml -e embedder.pt -m test --checkpoint_path chkpt/first/chkpt_45000.pt
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--base_dir', type=str, default='.',

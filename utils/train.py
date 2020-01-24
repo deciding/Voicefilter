@@ -70,6 +70,10 @@ def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp,
         time_averager=WindowAverager(100)
         loss_averager=WindowAverager(100)
 
+        #Eval
+        validate(audio, model, embedder, testloader, writer, step)
+        import pdb;pdb.set_trace()
+
         while True:
             model.train()
             for dvec_mels, target_mag, mixed_mag in trainloader:

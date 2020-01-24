@@ -1,0 +1,7 @@
+% use generator to generate the mixture, we can either no_need_spec(for convtasnet), normal(for voicefilter) need_phase(for later reconstruct mix)
+% we can add fields to generator output by chaning the generate.py file
+% use encoder_inference.py to produce spkid, it has 3 commands, for vox eval, for librispeech whole dataset, for convtasnet.
+% train use trainer.py
+% eval is also on trainer.py. by changing the 'Eval' line in utils/train.py
+% sdri is by changing the line "SDRi" in utils/evaluation.py
+% the speaker presence invariant test is manually changing config of dvec to dvec3, and "SPIT" lines in utils/evaluation.py

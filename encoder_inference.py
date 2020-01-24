@@ -7,8 +7,9 @@ from utils.hparams import HParam
 import librosa
 from utils.audio import Audio
 
-##python encoder_inference.py --in_dir ../vox1_test/wav/ --out_dir spkid --gpu_str 0
-#python encoder_inference.py --in_dir training_libri/test_phase --gpu_str 0
+#python encoder_inference.py --in_dir ../vox1_test/wav/ --out_dir spkid --gpu_str 0 (eval)
+#python encoder_inference.py --in_dir ../datasets/raw_libri/LibriSpeech --out_dir '' --gpu_str 0 (generate ls)
+#python encoder_inference.py --in_dir training_prepared/train --out_dir '' --gpu_str 0 (for speaker extraction of convtasnet, voicefilter will produce embedding on the fly)
 if __name__ == '__main__':
     ## Info & args
     parser = argparse.ArgumentParser(
@@ -46,6 +47,7 @@ if __name__ == '__main__':
 
     #wav_list=glob('%s/**/*.wav' % args.in_dir, recursive=True)
     wav_list=glob('%s/*dvec.wav' % args.in_dir, recursive=True)#convtasnet
+    #wav_list=glob('%s/*dvec3.wav' % args.in_dir, recursive=True)#convtasnet
     #wav_list=[wavfile for wavfile in wav_list if int(os.path.basename(wavfile).split('-')[0]) >=70000]
     for wav_file in tqdm(wav_list):
         #preprocessed_wav = encoder.preprocess_wav(wav_file)

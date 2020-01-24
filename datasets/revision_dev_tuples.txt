@@ -1,0 +1,6 @@
+changed dvec 27 ../datasets/raw_libri/LibriSpeech/dev-clean/2035/147960/2035-147960-0008-norm.wav
+changed dvec 169 ../datasets/raw_libri/LibriSpeech/dev-clean/1272/141231/1272-141231-0015-norm.wav
+changed dvec 323 ../datasets/raw_libri/LibriSpeech/dev-clean/1272/141231/1272-141231-0005-norm.wav
+changed dvec 701 ../datasets/raw_libri/LibriSpeech/dev-clean/1272/135031/1272-135031-0024-norm.wav
+changed dvec 969 ../datasets/raw_libri/LibriSpeech/dev-clean/2428/83705/2428-83705-0040-norm.wav
+changed dvec 998 ../datasets/raw_libri/LibriSpeech/dev-clean/5694/64025/5694-64025-0014-norm.wav
