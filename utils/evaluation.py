@@ -63,6 +63,7 @@ def cal_si_snr(source, estimate_source, source_lengths=None):
         estimate_source: [B, C, T]
         source_lengths: [B], each item is between [0, T]
     """
+    import pdb;pdb.set_trace()
     assert source.size() == estimate_source.size()
     # Add batch size dim
     if len(source.size())==1:
@@ -144,42 +145,42 @@ def validate(audio, model, embedder, testloader, writer, step):
 
             est_wav = audio.spec2wav(est_mag, mixed_phase)
             est_mask = est_mask[0].cpu().detach().numpy()
-            #SDRi
-            #sdri = bss_eval_sources(target_wav, est_wav, False)[0][0] - \
-            #        bss_eval_sources(target_wav, mixed_wav, False)[0][0]
-            #SPIT
-            #sisnri=cal_db(torch.from_numpy(est_wav).float())
-            sisnri = cal_si_snr(
-                        torch.from_numpy(target_wav).float(),
-                        torch.from_numpy(est_wav).float()
-                        ) - \
-                    cal_si_snr(
-                        torch.from_numpy(target_wav).float(),
-                        torch.from_numpy(mixed_wav).float()
-                    )
-            #SDRi
-            #sdri_list.append(sdri)
-            sisnri_list.append(sisnri)
-            total_sisnri+=sisnri
-            total_test_loss+=test_loss
             cnt+=1
-            if sisnri<0.0:
-                neg_cnt+=1
-            #SDRi
-            #print("Eval: step: %d, time: %.2f, wrong pred: %.3f, test loss: %.5f, avg: %.5f, sisnri: %.2f, avg: %.2f, median: %.2f, sdri: %.2f, avg: %.2f, median: %.2f" % \
-            #        (cnt, time()-start, float(neg_cnt)/float(cnt), test_loss, total_test_loss/cnt, sisnri, total_sisnri/cnt, np.median(sisnri_list),
-            #            sdri, np.mean(sdri_list), np.median(sdri_list)))
-            print("Eval: step: %d, time: %.2f, wrong pred: %.3f, test loss: %.5f, avg: %.5f, sisnri: %.2f, avg: %.2f, median: %.2f, sisisnri: %.2f" % \
-                    (cnt, time()-start, float(neg_cnt)/float(cnt), test_loss, total_test_loss/cnt, sisnri, total_sisnri/cnt, np.median(sisnri_list), np.mean([val for val in sisnri_list if val >0.0])))
+            ##SDRi
+            ##sdri = bss_eval_sources(target_wav, est_wav, False)[0][0] - \
+            ##        bss_eval_sources(target_wav, mixed_wav, False)[0][0]
+            ##SPIT
+            ##sisnri=cal_db(torch.from_numpy(est_wav).float())
+            #sisnri = cal_si_snr(
+            #            torch.from_numpy(target_wav).float(),
+            #            torch.from_numpy(est_wav).float()
+            #            ) - \
+            #        cal_si_snr(
+            #            torch.from_numpy(target_wav).float(),
+            #            torch.from_numpy(mixed_wav).float()
+            #        )
+            ##SDRi
+            ##sdri_list.append(sdri)
+            #sisnri_list.append(sisnri)
+            #total_sisnri+=sisnri
+            #total_test_loss+=test_loss
+            #if sisnri<0.0:
+            #    neg_cnt+=1
+            ##SDRi
+            ##print("Eval: step: %d, time: %.2f, wrong pred: %.3f, test loss: %.5f, avg: %.5f, sisnri: %.2f, avg: %.2f, median: %.2f, sdri: %.2f, avg: %.2f, median: %.2f" % \
+            ##        (cnt, time()-start, float(neg_cnt)/float(cnt), test_loss, total_test_loss/cnt, sisnri, total_sisnri/cnt, np.median(sisnri_list),
+            ##            sdri, np.mean(sdri_list), np.median(sdri_list)))
+            #print("Eval: step: %d, time: %.2f, wrong pred: %.3f, test loss: %.5f, avg: %.5f, sisnri: %.2f, avg: %.2f, median: %.2f, sisisnri: %.2f" % \
+            #        (cnt, time()-start, float(neg_cnt)/float(cnt), test_loss, total_test_loss/cnt, sisnri, total_sisnri/cnt, np.median(sisnri_list), np.mean([val for val in sisnri_list if val >0.0])))
             wav1, wav2, wav3 = mixed_wav, target_wav, est_wav
             #break
         #writer.log_evaluation(test_loss, sdr,
         #                      mixed_wav, target_wav, est_wav,
         #                      mixed_mag.T, target_mag.T, est_mag.T, est_mask.T,
         #                      step)
-        librosa.output.write_wav('logs/eval/mixed_wav_%d.wav' % step, wav1, 16000)
-        librosa.output.write_wav('logs/eval/target_wav_%d.wav' % step, wav2, 16000)
-        librosa.output.write_wav('logs/eval/est_wav_%d.wav' % step, wav3, 16000)
+            librosa.output.write_wav('logs/eval1/mixed_wav_%d_%d.wav' % (step, cnt), wav1, 16000)
+            librosa.output.write_wav('logs/eval1/target_wav_%d_%d.wav' % (step, cnt), wav2, 16000)
+            librosa.output.write_wav('logs/eval1/est_wav_%d_%d.wav' % (step, cnt), wav3, 16000)
 
     np.save('db_list.npy', sisnri_list)
 

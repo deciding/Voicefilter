@@ -123,24 +123,25 @@ def mix(hp, args, audio, num, s1_dvec, s1_target, s2_target, s2_dvec, us_dvec, t
     w1, w2, mixed = w1/norm, w2/norm, mixed/norm
     assert len(mixed) == len(w1) == len(w2)
 
-    ## save vad & normalized wav files
-    #target_wav_path = formatter(dir_, hp.form.target.wav, num)
-    #mixed_wav_path = formatter(dir_, hp.form.mixed.wav, num)
-    #librosa.output.write_wav(target_wav_path, w1, srate)
-    #librosa.output.write_wav(mixed_wav_path, mixed, srate)
-    #if True:
-    #    dvec_wav_path = formatter(dir_, hp.form.dvec_wav, num)
-    #    librosa.output.write_wav(dvec_wav_path, d, srate)
+    # save vad & normalized wav files
+    target_wav_path = formatter(dir_, hp.form.target.wav, num)
+    mixed_wav_path = formatter(dir_, hp.form.mixed.wav, num)
+    librosa.output.write_wav(target_wav_path, w1, srate)
+    librosa.output.write_wav(mixed_wav_path, mixed, srate)
+    if True:
+        dvec_wav_path = formatter(dir_, hp.form.dvec_wav, num)
+        librosa.output.write_wav(dvec_wav_path, d, srate)
+    flag=True #train
     if True:
         dvec3_wav_path = formatter(dir_, hp.form.dvec3_wav, num)
         librosa.output.write_wav(dvec3_wav_path, d3, srate)
-    if train:
+    if flag:
         target2_wav_path = formatter(dir_, hp.form.target2.wav, num)
         librosa.output.write_wav(target2_wav_path, w2, srate)
-    if train:
+    if flag:
         dvec2_wav_path = formatter(dir_, hp.form.dvec2_wav, num)
         librosa.output.write_wav(dvec2_wav_path, d2, srate)
-    if train:
+    if flag:
         dvec3_wav_path = formatter(dir_, hp.form.dvec3_wav, num)
         librosa.output.write_wav(dvec3_wav_path, d3, srate)
 
@@ -172,10 +173,10 @@ def mix(hp, args, audio, num, s1_dvec, s1_target, s2_target, s2_dvec, us_dvec, t
     with open(s1_text_path, 'w') as f:
         f.write(get_text_from_wav(s1_target))
 
-    ## save selected sample as text file. d-vec will be calculated soon
-    #dvec_text_path = formatter(dir_, hp.form.dvec, num)
-    #with open(dvec_text_path, 'w') as f:
-    #    f.write(s1_dvec)
+    # save selected sample as text file. d-vec will be calculated soon
+    dvec_text_path = formatter(dir_, hp.form.dvec, num)
+    with open(dvec_text_path, 'w') as f:
+        f.write(s1_dvec)
     #assert os.path.exists(dvec_wav_path) and os.path.exists(dvec2_wav_path) \
     #        and os.path.exists(mixed_wav_path) \
     #        and os.path.exists(target_wav_path) and os.path.exists(mixed_mag_path) \
@@ -453,5 +454,5 @@ if __name__ == '__main__':
 
         #arr = list(range(10**3))
         arr = list(range(1352))
-        with Pool(cpu_num) as p:
+        with Pool(20) as p:
             r = list(tqdm.tqdm(p.imap(prepared_test_wrapper, arr), total=len(arr)))
